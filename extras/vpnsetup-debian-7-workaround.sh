@@ -1,11 +1,11 @@
 #!/bin/sh
 #
 # Debian 7 (Wheezy) does NOT have the required libnss version (>= 3.16) for Libreswan.
-# This script provides a workaround by installing unofficial packages from download.libreswan.org.
+# This script provides a workaround by installing newer packages from libreswan.org.
 # Debian 7 users: Run this script first, before using the VPN setup script.
 #
-# IMPORTANT: These unofficial packages do not receive the latest security updates compared to
-# official Debian packages. They could contain unpatched vulnerabilities. Use at your own risk!
+# IMPORTANT: These unofficial packages may not receive security updates compared to
+# official Debian packages. They could contain vulnerabilities. Use at your own risk!
 #
 # Copyright (C) 2015-2016 Lin Song <linsongui@gmail.com>
 #
@@ -22,31 +22,28 @@
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-echoerr() { echo "$@" 1>&2; }
+exiterr() { echo "Error: ${1}" >&2; exit 1; }
 
 if [ "$(sed 's/\..*//' /etc/debian_version 2>/dev/null)" != "7" ]; then
-  echoerr "This script only supports Debian 7 (Wheezy)."
-  exit 1
+  exiterr "This script only supports Debian 7 (Wheezy)."
 fi
 
 if [ "$(uname -m)" != "x86_64" ]; then
-  echoerr "This script only supports 64-bit Debian 7."
-  exit 1
+  exiterr "This script only supports 64-bit Debian 7."
 fi
 
 if [ "$(id -u)" != 0 ]; then
-  echoerr "Script must be run as root. Try 'sudo sh $0'"
-  exit 1
+  exiterr "Script must be run as root. Try 'sudo sh $0'"
 fi
 
 # Create and change to working dir
 mkdir -p /opt/src
-cd /opt/src || exit 1
+cd /opt/src || exiterr "Cannot enter /opt/src."
 
 # Update package index and install wget
 export DEBIAN_FRONTEND=noninteractive
-apt-get -yq update
-apt-get -yq install wget
+apt-get -yq update || exiterr "'apt-get update' failed."
+apt-get -yq install wget || exiterr "Failed to install 'wget'."
 
 # Install libnss/libnspr packages from download.libreswan.org.
 # Ref: https://libreswan.org/wiki/3.14_on_Debian_Wheezy
@@ -71,8 +68,6 @@ if [ -s "$deb1" ] && [ -s "$deb2" ] && [ -s "$deb3" ] && [ -s "$deb4" ] && [ -s 
   echo 'Completed! If no error, you may now proceed to run the VPN setup script.'
   exit 0
 else
-  echoerr
-  echoerr 'Could not download libnss/libnspr package(s). Aborting.'
   /bin/rm -f "$deb1" "$deb2" "$deb3" "$deb4" "$deb5"
-  exit 1
+  exiterr 'Could not download libnss/libnspr package(s).'
 fi
